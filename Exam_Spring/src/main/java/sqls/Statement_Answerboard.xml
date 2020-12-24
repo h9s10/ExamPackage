@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.min.edu.model.Answerboard_IDao">
+
+	<!-- 글 조회 -->
+	<select id="selectDynamic" parameterType="java.util.Map" resultType="ADto">
+		SELECT SEQ,ID,TITLE,CONTENT, READCOUNT,REFER, STEP,DEPTH,REGDATE, DELFLAG
+		FROM ANSWERBOARD a
+		<where>
+			<if test="seq != null">
+				SEQ = #{seq}
+			</if>
+		</where>
+		ORDER BY REFER DESC, STEP ASC
+	</select>
+	
+	<select id="selectDetailBoard" parameterType="java.lang.String" resultType="ADto">
+		SELECT SEQ, ID, TITLE, CONTENT , READCOUNT, REFER, STEP, DEPTH, REGDATE ,DELFLAG
+		FROM ANSWERBOARD
+		WHERE SEQ=#{seq}
+	</select>
+
+	<!-- 답글 입력 -->
+	<insert id="replyInsert" parameterType="ADto">
+		INSERT INTO ANSWERBOARD(SEQ,ID,TITLE, CONTENT,READCOUNT,REFER, STEP, DEPTH,REGDATE,DELFLAG)
+		VALUES(ANSWERBOARD_SEQ.NEXTVAL, #{id},#{title}, #{content}, 0,(SELECT REFER FROM ANSWERBOARD a WHERE SEQ=#{seq}),
+		(SELECT STEP FROM ANSWERBOARD a2 WHERE SEQ=#{seq})+1,
+		(SELECT DEPTH FROM ANSWERBOARD a3 WHERE SEQ=#{seq})+1, SYSDATE, 'N')
+	</insert>
+	
+	<!--  답글 업데이트 -->
+	<update id="replyUpdate" parameterType="ADto">
+		UPDATE ANSWERBOARD SET STEP = STEP+1
+		WHERE REFER = (SELECT REFER FROM ANSWERBOARD a WHERE SEQ= #{seq})
+		AND STEP > (SELECT STEP FROM ANSWERBOARD a2 WHERE SEQ=#{seq})
+	</update>
+
+	<!-- 글 수정 -->
+	<update id="modifyBoard" parameterType="java.util.Map">
+		UPDATE ANSWERBOARD SET CONTENT=#{content}, REGDATE = SYSDATE
+		WHERE SEQ = #{seq}
+	</update>
+
+	<!-- 글 입력 -->
+	<insert id="insertBoard" parameterType="ADto">
+		INSERT INTO ANSWERBOARD(SEQ,ID,TITLE, CONTENT,READCOUNT,REFER, STEP, DEPTH, REGDATE, DELFLAG)
+		VALUES(ANSWERBOARD_SEQ.NEXTVAL,#{id}, #{title}, #{content}, 0, 
+		(SELECT NVL(MAX(REFER),0)+1 FROM ANSWERBOARD), 0, 0, SYSDATE, 'N')
+		<selectKey keyProperty="seq" resultType="java.lang.Integer" order="AFTER">
+			SELECT ANSWERBOARD_SEQ.CURRVAL AS SEQ FROM DUAL
+		</selectKey>
+	</insert>
+
+	<!-- 글 삭제 -->
+	<update id="multiDelete" parameterType="java.lang.String">
+		UPDATE ANSWERBOARD SET DELFLAG = 'Y'
+		WHERE SEQ = #{seq}
+	</update>
+	
+	<!-- 글 삭제 -->
+	<update id="multiDelete2" parameterType="java.util.Map">
+		UPDATE ANSWERBOARD SET DELFLAG = 'Y'
+		WHERE SEQ IN
+		<foreach collection="seqs" item="seq" open="(" separator=","	close=")">
+			#{seq}
+		</foreach>
+	</update>
+
+</mapper>
